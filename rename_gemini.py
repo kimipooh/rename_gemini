@@ -2,8 +2,9 @@
 """
 Author: Kimiya Kitani
 License: MIT License
-Version: 1.0
+Version: 1.1
 Description: Vertex AI (Gemini) image classification and auto-renaming tool.
+             Supports multiple target files and wildcards.
 """
 
 import sys
@@ -51,22 +52,24 @@ DEFAULT_THINKING_LEVEL = "medium"
 DEFAULT_OUTPUT_LANG = "en"
 DEFAULT_UI_LANG = "en"
 
+# UI Messaging Definitions
 MSG_INFO_ACTION_COPY   = "Action Mode: Copy (Original file is preserved)"
 MSG_INFO_ACTION_RENAME = "Action Mode: Rename (Original file will be moved/overwritten)"
 MSG_INFO_MODEL_CONFIG  = "Using Model: {model} | Output Lang: {out_lang} | Thinking: {thinking}"
+MSG_INFO_PROCESSING    = "[{index}/{total}] Processing: {target}"
 MSG_ERR_CRITICAL       = "Critical Error: {error}"
 # ==========================================
 
 def main():
     parser = argparse.ArgumentParser(description="Gemini Image Rename Tool")
-    parser.add_argument("target", help="Target image path")
-    parser.add_argument("--lang", type=str, default=None, help="UI language (ja, en)")
     
-    # Prefix Language choices (Updated to include supported languages)
+    # Changed "target" to "targets" and added nargs="+" to support multiple files
+    parser.add_argument("targets", nargs="+", help="Target image path(s) or wildcard (e.g., *.png)")
+    
+    parser.add_argument("--lang", type=str, default=None, help="UI language (ja, en)")
     parser.add_argument("--output-lang", type=str, default=DEFAULT_OUTPUT_LANG, 
                         choices=["en", "ja", "vi", "th", "id", "ms", "ko", "zh", "hi", "ar", "fr", "de", "es", "pt", "it", "ru", "tr", "nl", "sv"],
-                        help="Language for the generated prefix. Supports major Gemini languages.")
-    
+                        help="Language for the generated prefix.")
     parser.add_argument("--keyfile", type=str, default=DEFAULT_CREDENTIALS_PATH)
     parser.add_argument("--model", type=str, default=DEFAULT_GEMINI_MODEL)
     parser.add_argument("--thinking", type=str, default=DEFAULT_THINKING_LEVEL)
@@ -78,6 +81,7 @@ def main():
     ui_lang = LanguageLoader(ui_lang_code)
 
     try:
+        # Initialize Analyzer
         vision_tool = GeminiAnalyzer(
             key_path=args.keyfile, 
             model_name=args.model, 
@@ -86,25 +90,44 @@ def main():
             output_lang=args.output_lang
         )
         
-        print(ui_lang.get("MSG_STATUS_START").format(target=args.target))
         print(MSG_INFO_MODEL_CONFIG.format(model=args.model, out_lang=args.output_lang, thinking=thinking_level or "Disabled"))
-        
-        prefix = vision_tool.generate_filename_prefix(args.target)
-        
-        target_abs_path = os.path.abspath(args.target)
-        target_dir = os.path.dirname(target_abs_path)
-        target_basename = os.path.basename(target_abs_path)
-        filename_without_ext, ext = os.path.splitext(target_basename)
-        
-        new_filename = f"{prefix}_{filename_without_ext}{ext}"
-        new_filepath = os.path.join(target_dir, new_filename)
-        
         if args.action == "copy":
-            shutil.copy2(target_abs_path, new_filepath)
-            print(ui_lang.get("MSG_STATUS_COPIED").format(new_path=new_filepath))
+            print(MSG_INFO_ACTION_COPY)
         else:
-            os.rename(target_abs_path, new_filepath)
-            print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
+            print(MSG_INFO_ACTION_RENAME)
+        
+        print("-" * 40)
+
+        # Iterate through all target files
+        total_files = len(args.targets)
+        for i, target in enumerate(args.targets, 1):
+            print(MSG_INFO_PROCESSING.format(index=i, total=total_files, target=target))
+            
+            try:
+                prefix = vision_tool.generate_filename_prefix(target)
+                
+                target_abs_path = os.path.abspath(target)
+                target_dir = os.path.dirname(target_abs_path)
+                target_basename = os.path.basename(target_abs_path)
+                filename_without_ext, ext = os.path.splitext(target_basename)
+                
+                new_filename = f"{prefix}_{filename_without_ext}{ext}"
+                new_filepath = os.path.join(target_dir, new_filename)
+                
+                if args.action == "copy":
+                    shutil.copy2(target_abs_path, new_filepath)
+                    print(ui_lang.get("MSG_STATUS_COPIED").format(new_path=new_filepath))
+                else:
+                    os.rename(target_abs_path, new_filepath)
+                    print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
+            
+            except Exception as e:
+                # Log error for individual file and continue to the next
+                print(f"  Error processing {target}: {e}")
+                continue
+
+        print("-" * 40)
+        print("Batch processing completed.")
 
     except Exception as e:
         print(MSG_ERR_CRITICAL.format(error=e))

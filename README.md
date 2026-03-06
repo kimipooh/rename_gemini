@@ -1,6 +1,8 @@
 # 🤖 Google Cloud Vertex AI (Gemini) Image Analyzer & Renamer
 
-> **Version 1.0 (2026-03-06)**
+>**Version 1.0 (2026-03-06)**  
+>**Version 1.1 (2026-03-06) 複数ファイルに対応**
+
 > Google Cloud Vertex AI (Gemini) を利用して画像の内容を解析し、その内容にふさわしい接頭辞（プレフィックス）を生成して自動的にファイル名を変更・整理するツールです。
 
 ---
@@ -49,7 +51,7 @@ DEFAULT_CREDENTIALS_PATH = "/Users/username/keys/your-service-account.json"
 
 | オプション | 引数 | 説明 |
 | :--- | :--- | :--- |
-| `target` | (必須) | 解析対象となる画像ファイルへのパス。 (例: `./image.png`) |
+| `target` | (必須) | 解析対象となる画像ファイルへのパス。 (例: `./image.png`, `./*.jpg`) |
 | `--lang` | `ja`, `en` | **UI表示言語**。操作ログやエラーメッセージの言語を指定します。 |
 | `--output-lang` | (下記参照) | **生成されるファイル名の言語**。接頭辞をどの言語で作るか指定します。 |
 | `--action` | `rename`, `copy` | **ファイル操作の動作**。直接リネームするか、コピーを作成するかを選択。 |
