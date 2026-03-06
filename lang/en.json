@@ -1,0 +1,9 @@
+{
+  "MSG_STATUS_START": "Starting image analysis for: {target}",
+  "MSG_STATUS_RENAMED": "File renamed to: {new_path}",
+  "MSG_STATUS_COPIED": "File copied to: {new_path}",
+  "MSG_ERR_FILE_NOT_FOUND": "File not found: {path}",
+  "MSG_ERR_API_RESPONSE": "API Error: {error}",
+  "MSG_ERR_KEY_FILE": "Service Account JSON file not found or invalid: {path}",
+  "MSG_ERR_IMAGE_PROCESS": "Image processing error: {error}"
+}

@@ -1,0 +1,9 @@
+{
+  "MSG_STATUS_START": "画像解析を開始します: {target}",
+  "MSG_STATUS_RENAMED": "ファイル名を変更しました: {new_path}",
+  "MSG_STATUS_COPIED": "ファイルをコピーしました: {new_path}",
+  "MSG_ERR_FILE_NOT_FOUND": "ファイルが見つかりません: {path}",
+  "MSG_ERR_API_RESPONSE": "APIエラー: {error}",
+  "MSG_ERR_KEY_FILE": "サービスアカウントのJSONファイルが見つからないか無効です: {path}",
+  "MSG_ERR_IMAGE_PROCESS": "画像処理エラー: {error}"
+}

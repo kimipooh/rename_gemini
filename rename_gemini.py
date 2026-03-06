@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""
+Author: Kimiya Kitani
+License: MIT License
+Version: 1.0
+Description: Vertex AI (Gemini) image classification and auto-renaming tool.
+"""
+
+import sys
+import os
+import argparse
+import shutil
+
+# --- Automatic adjustment of module search path ---
+script_path = os.path.abspath(__file__)
+script_dir = os.path.dirname(script_path)
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+try:
+    from modules.gemini_analyzer import GeminiAnalyzer, LanguageLoader
+except ImportError as e:
+    print(f"Critical Error: Required modules not found in {script_dir}. {e}")
+    sys.exit(1)
+
+# ==========================================
+# Global Settings
+# ==========================================
+DEFAULT_CREDENTIALS_PATH = "/Users/username/keys/your-service-account.json"
+
+# Available Gemini Models (Availability and Characteristics)
+# ----------------------------------------------------------------------
+# [Best for Image Analysis and Classification]
+# - "gemini-2.5-flash-image"      : Optimized for image understanding. Best for current image organization.
+#
+# [General Purpose & High Speed]
+# - "gemini-2.5-flash"            : Standard high-speed model.
+# - "gemini-2.5-flash-lite"       : Most affordable and fastest.
+# - "gemini-2.0-flash-001"        : Stable version of the 2.0 series.
+#
+# [Latest & Preview Models]
+# NOTE: These may NOT be available in your project yet (returns 404).
+# Check the link below and enable if necessary before use:
+# https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
+# - "gemini-3.1-flash-lite-preview": Released 3/3. Supports Thinking feature.
+# - "gemini-3.1-pro-preview"       : Released 2/19. For advanced reasoning.
+# ----------------------------------------------------------------------
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-image"
+
+DEFAULT_THINKING_LEVEL = "medium" 
+DEFAULT_OUTPUT_LANG = "en"
+DEFAULT_UI_LANG = "en"
+
+MSG_INFO_ACTION_COPY   = "Action Mode: Copy (Original file is preserved)"
+MSG_INFO_ACTION_RENAME = "Action Mode: Rename (Original file will be moved/overwritten)"
+MSG_INFO_MODEL_CONFIG  = "Using Model: {model} | Output Lang: {out_lang} | Thinking: {thinking}"
+MSG_ERR_CRITICAL       = "Critical Error: {error}"
+# ==========================================
+
+def main():
+    parser = argparse.ArgumentParser(description="Gemini Image Rename Tool")
+    parser.add_argument("target", help="Target image path")
+    parser.add_argument("--lang", type=str, default=None, help="UI language (ja, en)")
+    
+    # Prefix Language choices (Updated to include supported languages)
+    parser.add_argument("--output-lang", type=str, default=DEFAULT_OUTPUT_LANG, 
+                        choices=["en", "ja", "vi", "th", "id", "ms", "ko", "zh", "hi", "ar", "fr", "de", "es", "pt", "it", "ru", "tr", "nl", "sv"],
+                        help="Language for the generated prefix. Supports major Gemini languages.")
+    
+    parser.add_argument("--keyfile", type=str, default=DEFAULT_CREDENTIALS_PATH)
+    parser.add_argument("--model", type=str, default=DEFAULT_GEMINI_MODEL)
+    parser.add_argument("--thinking", type=str, default=DEFAULT_THINKING_LEVEL)
+    parser.add_argument("--action", type=str, choices=["rename", "copy"], default="rename")
+    args = parser.parse_args()
+
+    thinking_level = None if args.thinking in ["None", "none", "", None] else args.thinking
+    ui_lang_code = args.lang or ("ja" if os.path.exists(os.path.join(script_dir, "lang", "ja.json")) else DEFAULT_UI_LANG)
+    ui_lang = LanguageLoader(ui_lang_code)
+
+    try:
+        vision_tool = GeminiAnalyzer(
+            key_path=args.keyfile, 
+            model_name=args.model, 
+            thinking_level=thinking_level, 
+            lang_code=ui_lang_code,
+            output_lang=args.output_lang
+        )
+        
+        print(ui_lang.get("MSG_STATUS_START").format(target=args.target))
+        print(MSG_INFO_MODEL_CONFIG.format(model=args.model, out_lang=args.output_lang, thinking=thinking_level or "Disabled"))
+        
+        prefix = vision_tool.generate_filename_prefix(args.target)
+        
+        target_abs_path = os.path.abspath(args.target)
+        target_dir = os.path.dirname(target_abs_path)
+        target_basename = os.path.basename(target_abs_path)
+        filename_without_ext, ext = os.path.splitext(target_basename)
+        
+        new_filename = f"{prefix}_{filename_without_ext}{ext}"
+        new_filepath = os.path.join(target_dir, new_filename)
+        
+        if args.action == "copy":
+            shutil.copy2(target_abs_path, new_filepath)
+            print(ui_lang.get("MSG_STATUS_COPIED").format(new_path=new_filepath))
+        else:
+            os.rename(target_abs_path, new_filepath)
+            print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
+
+    except Exception as e:
+        print(MSG_ERR_CRITICAL.format(error=e))
+
+if __name__ == "__main__":
+    main()
