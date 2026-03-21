@@ -31,6 +31,28 @@
 > [!WARNING]
 > 生成された JSON キーには強力なアクセス権が含まれます。公開リポジトリ（GitHub 等）にアップロードしたり、第三者に共有したりしないよう厳重に管理してください。
 
+### 🛠️ Python へモジュール追加
+
+下記のように、google-cloud-aiplatform　モジュールをインストールしてください。
+
+`python3 -m pip install google-cloud-aiplatform`
+
+なお、Pytyon3.10以降が望ましいです。
+macOS をお使いの場合には、標準が 3.9.xです。
+Homebrew などで 3.10以降をインストールした場合、
+
+下記のように特定フォルダでのみ、下記のように 3.10以降のバージョンが使えるようにしてみてください。
+```
+mkdir project-a
+cd project-a 
+/opt/homebrew/bin/python3 -m venv .venv
+source .venv/bin/activate
+pip install google-cloud-aiplatform
+export GOOGLE_APPLICATION_CREDENTIALS="service-account-key.json"
+```
+
+そうすれば、上記のときだけ、python コマンドで最新の pythonを使えます。
+以下、python コマンドが使えると仮定して説明します。
 
 ### 🔑 設定方法
 `rename_gemini.py` を開き、以下のグローバル変数に使用する JSON キーの絶対パスを指定してください。
