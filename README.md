@@ -2,10 +2,19 @@
 
 >**Version 1.0 (2026-03-06)**  
 >**Version 1.1 (2026-03-06) 複数ファイルに対応**
+>**Version 1.2 (2026-03-21) 複数ファイル利用時のAPI制限の対策を追加**
 
 > Google Cloud Vertex AI (Gemini) を利用して画像の内容を解析し、その内容にふさわしい接頭辞（プレフィックス）を生成して自動的にファイル名を変更・整理するツールです。
 
 ---
+## 注意
+複数ファイルを指定した場合、Vertex AIの制限よって、RPM制限（１分間に15回ぐらいが多いらしい）をうける可能性があります。実際1000枚ぐらいのテストをすると、14枚ぐらいでエラー「APIエラー: 429 Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429」がでました。
+
+下記をみると、予想では Tier1 のように支払いが少ないと制限がかなりキツそうだということがわかりました。
+
+[Vertex AI の生成 AI の割り当てとシステム上限](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/quotas) 
+
+そのため、7秒ごとに実施し、もし APIエラー 429 が出た場合には、60秒まってから再実行することに切り替えました。
 
 ## 📌 1. 必須設定：認証 (Credentials)
 

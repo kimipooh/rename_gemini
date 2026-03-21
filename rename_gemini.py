@@ -2,7 +2,7 @@
 """
 Author: Kimiya Kitani
 License: MIT License
-Version: 1.1
+Version: 1.2
 Description: Vertex AI (Gemini) image classification and auto-renaming tool.
              Supports multiple target files and wildcards.
 """
@@ -11,6 +11,7 @@ import sys
 import os
 import argparse
 import shutil
+import time  # Added for sleep processing
 
 # --- Automatic adjustment of module search path ---
 script_path = os.path.abspath(__file__)
@@ -103,28 +104,42 @@ def main():
         for i, target in enumerate(args.targets, 1):
             print(MSG_INFO_PROCESSING.format(index=i, total=total_files, target=target))
             
-            try:
-                prefix = vision_tool.generate_filename_prefix(target)
+            # Retry loop for the current file to prevent skipping on 429 errors
+            while True:
+                try:
+                    prefix = vision_tool.generate_filename_prefix(target)
+                    
+                    target_abs_path = os.path.abspath(target)
+                    target_dir = os.path.dirname(target_abs_path)
+                    target_basename = os.path.basename(target_abs_path)
+                    filename_without_ext, ext = os.path.splitext(target_basename)
+                    
+                    # Update: Naming convention set to OriginalName_GeminiName.extension
+                    new_filename = f"{filename_without_ext}_{prefix}{ext}"
+                    new_filepath = os.path.join(target_dir, new_filename)
+                    
+                    if args.action == "copy":
+                        shutil.copy2(target_abs_path, new_filepath)
+                        print(ui_lang.get("MSG_STATUS_COPIED").format(new_path=new_filepath))
+                    else:
+                        os.rename(target_abs_path, new_filepath)
+                        print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
+                    
+                    # Success: Wait 7 seconds before the next file and break the retry loop
+                    time.sleep(7)
+                    break
                 
-                target_abs_path = os.path.abspath(target)
-                target_dir = os.path.dirname(target_abs_path)
-                target_basename = os.path.basename(target_abs_path)
-                filename_without_ext, ext = os.path.splitext(target_basename)
-                
-                new_filename = f"{prefix}_{filename_without_ext}{ext}"
-                new_filepath = os.path.join(target_dir, new_filename)
-                
-                if args.action == "copy":
-                    shutil.copy2(target_abs_path, new_filepath)
-                    print(ui_lang.get("MSG_STATUS_COPIED").format(new_path=new_filepath))
-                else:
-                    os.rename(target_abs_path, new_filepath)
-                    print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
-            
-            except Exception as e:
-                # Log error for individual file and continue to the next
-                print(f"  Error processing {target}: {e}")
-                continue
+                except Exception as e:
+                    print(f"  Error processing {target}: {e}")
+                    
+                    # If 429 error occurs, wait for 60 seconds and retry the SAME file
+                    if "429" in str(e):
+                        print("  Rate limit reached (429). Waiting 60 seconds before retrying this file...")
+                        time.sleep(60)
+                    else:
+                        # For other errors, wait 10 seconds and retry
+                        print("  Unexpected error. Retrying in 10 seconds...")
+                        time.sleep(10)
 
         print("-" * 40)
         print("Batch processing completed.")
