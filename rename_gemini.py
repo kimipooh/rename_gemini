@@ -2,7 +2,7 @@
 """
 Author: Kimiya Kitani
 License: MIT License
-Version: 2.0
+Version: 2.1
 Description: Gemini image classification and auto-renaming tool.
              Supports both Google AI Studio (Default) and Vertex AI (Optional).
              Supports multiple target files and wildcards.
@@ -73,7 +73,7 @@ def get_ai_studio_prefix(model, target_path, output_lang):
     return response.text.strip()
 
 def main():
-    parser = argparse.ArgumentParser(description="Gemini Image Rename Tool v2.0")
+    parser = argparse.ArgumentParser(description="Gemini Image Rename Tool v2.1")
     parser.add_argument("targets", nargs="+", help="Target image path(s) or wildcard (e.g., *.png)")
     
     # Provider Settings
@@ -91,6 +91,11 @@ def main():
     parser.add_argument("--model", type=str, default=None, help="Override default model name")
     parser.add_argument("--thinking", type=str, default=DEFAULT_THINKING_LEVEL)
     parser.add_argument("--action", type=str, choices=["rename", "copy"], default="rename")
+
+    # Waiting Time Settings
+    parser.add_argument("--sleep", type=float, default=None, help="Sleep time (seconds) between requests.")
+    parser.add_argument("--retry-sleep", type=float, default=None, help="Sleep time (seconds) after a 429 error.")
+    
     args = parser.parse_args()
 
     ui_lang_code = args.lang or ("ja" if os.path.exists(os.path.join(script_dir, "lang", "ja.json")) else DEFAULT_UI_LANG)
@@ -151,20 +156,25 @@ def main():
                         os.rename(target_abs_path, new_filepath)
                         print(ui_lang.get("MSG_STATUS_RENAMED").format(new_path=new_filepath))
                     
-                    # Distinct sleep time based on provider
+                    # Distinct sleep time based on provider or custom argument
                     # Vertex AI (Tier 1) requires a much longer wait to avoid 429 errors.
                     # Google AI Studio usually allows much faster requests.
-                    if args.use_vertex:
+                    if args.sleep is not None:
+                        time.sleep(args.sleep)
+                    elif args.use_vertex:
                         time.sleep(25)
                     else:
-                        time.sleep(2)
+                        time.sleep(0.3)
                     break
                 
                 except Exception as e:
                     print(f"  Error processing {target}: {e}")
                     if "429" in str(e):
-                        # Recovery time also differs by provider
-                        wait_time = 90 if args.use_vertex else 30
+                        # Recovery time also differs by provider or custom argument
+                        if args.retry_sleep is not None:
+                            wait_time = args.retry_sleep
+                        else:
+                            wait_time = 90 if args.use_vertex else 30
                         print(f"  Rate limit reached (429). Waiting {wait_time} seconds...")
                         time.sleep(wait_time)
                     else:

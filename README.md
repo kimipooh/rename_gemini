@@ -5,6 +5,7 @@
 > **Version 1.2 (2026-03-21) 複数ファイル利用時のAPI制限の対策を追加**  
 > **Version 1.3 (2026-03-21) 無害化（サニタイズ）: スラッシュ等をハイフンに置換する処理を追加**  
 > **Version 2.0 (2026-03-21) Vertex AIの制限回避のため Google AI Studio をデフォルトに、Vertex AI をサブに変更。**  
+> **Version 2.1 (2026-03-21) --sleep と --retry-sleep オプションを追加し、利用するモデルに応じて調整できるように変更。**
 
 > Gemini API (Google AI Studio / Google Cloud Vertex AI) を利用して画像の内容を解析し、その内容にふさわしい接頭辞（プレフィックス）を生成して自動的にファイル名を変更・整理するツールです。
 
@@ -48,6 +49,9 @@ Version 2.0 では以下のモジュールが必要です。
 | `--action` | `rename`, `copy`| 直接リネームするか、コピーを作成するかを選択。 |
 | `--model` | `ID` | 使用する **Gemini モデル ID**。 |
 | `--thinking` | `high`~`None` | **思考レベル**。推論の深さを調整（3.x系対応）。 |
+| `--sleep` | 秒数 | **複数ファイル間の実行の待ち秒数**。デフォルトは、Google AI Studioなら 0.3  Vertex APIなら、25。APIのRPM（１分間に何回リクエスト可能か）をみて調整すること。0.5なども使える |
+| `--retry-sleep` | 秒数 | **APIエラー（上限）を超えたときの待機秒数**。デフォルトは、Google AI Studioなら 30  Vertex APIなら、90。|
+
 
 ---
 
@@ -63,6 +67,8 @@ Version 2.0 では以下のモジュールが必要です。
 | **`gemini-2.5-flash`** | **推奨** 安定版。標準的な画像解析に。 |
 | **`gemini-2.5-flash-lite`** | **推奨** 高速・安価版。大量処理でもやすい。ただし大雑把になりやすい。 |
 | **`gemini-3.1-flash-lite-preview`** | 思考機能対応。ただし思考レベルを指定しない（None）ざと大雑把になりやすい）|
+
+モデルごとの上限は、Google AI Studio のレート制限や、[制限](https://ai.google.dev/gemini-api/docs/rate-limits)を参考にしてください。
 
 ---
 
