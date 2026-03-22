@@ -5,7 +5,7 @@
 > **Version 1.2 (2026-03-21) 複数ファイル利用時のAPI制限の対策を追加**  
 > **Version 1.3 (2026-03-21) 無害化（サニタイズ）: スラッシュ等をハイフンに置換する処理を追加**  
 > **Version 2.0 (2026-03-21) Vertex AIの制限回避のため Google AI Studio をデフォルトに、Vertex AI をサブに変更。**  
-> **Version 2.1 (2026-03-21) --sleep と --retry-sleep オプションを追加し、利用するモデルに応じて調整できるように変更。**
+> **Version 2.1 (2026-03-21) --sleep と --retry-sleep オプションを追加し、利用するモデルに応じて調整できるように変更。**  
 > **Version 3.0 (2026-03-22) google.generativeaiとgoogle-cloud-aiplatformモジュールを廃止し、google.genaiに統合した。**
 
 > Gemini API (Google AI Studio / Google Cloud Vertex AI) を利用して画像の内容を解析し、その内容にふさわしい接頭辞（プレフィックス）を生成して自動的にファイル名を変更・整理するツールです。
