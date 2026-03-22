@@ -1,4 +1,4 @@
-# 🤖 Gemini Image Analyzer & Renamer (v2.0)
+# 🤖 Gemini Image Analyzer & Renamer
 
 > **Version 1.0 (2026-03-06)**  
 > **Version 1.1 (2026-03-06) 複数ファイルに対応**  
