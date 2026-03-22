@@ -2,7 +2,7 @@
 """
 Author: Kimiya Kitani
 License: MIT License
-Version: 2.1
+Version: 3.0
 Description: Gemini image classification and auto-renaming tool.
              Supports both Google AI Studio (Default) and Vertex AI (Optional).
              Supports multiple target files and wildcards.
@@ -13,7 +13,8 @@ import os
 import argparse
 import shutil
 import time
-import google.generativeai as genai
+import json
+from google import genai
 
 # --- Automatic adjustment of module search path ---
 script_path = os.path.abspath(__file__)
@@ -22,7 +23,7 @@ if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
 try:
-    from modules.gemini_analyzer import GeminiAnalyzer, LanguageLoader
+    from modules.gemini_analyzer import LanguageLoader
 except ImportError as e:
     print(f"Critical Error: Required modules not found in {script_dir}. {e}")
     sys.exit(1)
@@ -52,6 +53,8 @@ DEFAULT_AI_STUDIO_MODEL = "gemini-2.5-flash"
 # For Vertex AI (Sub/Optional)
 DEFAULT_CREDENTIALS_PATH = "/Users/username/keys/your-service-account.json"
 DEFAULT_VERTEX_MODEL = "gemini-2.5-flash"
+DEFAULT_PROJECT_ID = "YOUR_PROJECT_ID" # This will be overridden if keyfile is provided
+DEFAULT_LOCATION = "us-central1"       # Required for Vertex AI
 
 DEFAULT_THINKING_LEVEL = "medium" 
 DEFAULT_OUTPUT_LANG = "en"
@@ -64,12 +67,15 @@ MSG_INFO_PROCESSING    = "[{index}/{total}] Processing: {target}"
 MSG_ERR_CRITICAL       = "Critical Error: {error}"
 # ==========================================
 
-def get_ai_studio_prefix(model, target_path, output_lang):
-    """Helper for Google AI Studio (Gemini API) requests."""
+def get_gemini_prefix(client, model_name, target_path, output_lang):
+    """Helper for both AI Studio and Vertex AI requests using the new SDK."""
     from PIL import Image
     img = Image.open(target_path)
     prompt = f"Describe this image in a very short name (max 10 characters) in {output_lang}. Output only the name."
-    response = model.generate_content([prompt, img])
+    response = client.models.generate_content(
+        model=model_name,
+        contents=[prompt, img]
+    )
     return response.text.strip()
 
 def main():
@@ -108,19 +114,27 @@ def main():
         # Select the appropriate authentication key
         auth_key = args.keyfile or (DEFAULT_CREDENTIALS_PATH if args.use_vertex else DEFAULT_API_KEY)
         
-        # Initialize the chosen provider
+        # Initialize the chosen provider using unified SDK
         vision_tool = None
         if args.use_vertex:
-            vision_tool = GeminiAnalyzer(
-                key_path=auth_key, 
-                model_name=model_name, 
-                thinking_level=args.thinking if args.thinking != "None" else None, 
-                lang_code=ui_lang_code,
-                output_lang=args.output_lang
+            # Resolve project_id from JSON file if available
+            project_id = DEFAULT_PROJECT_ID
+            if auth_key and os.path.exists(auth_key):
+                try:
+                    with open(auth_key, "r", encoding="utf-8") as f:
+                        key_data = json.load(f)
+                        project_id = key_data.get("project_id", DEFAULT_PROJECT_ID)
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = auth_key
+                except Exception as e:
+                    print(f"  Warning: Could not parse project_id from {auth_key}. {e}")
+            
+            vision_tool = genai.Client(
+                vertexai=True,
+                project=project_id,
+                location=DEFAULT_LOCATION
             )
         else:
-            genai.configure(api_key=auth_key)
-            vision_tool = genai.GenerativeModel(model_name)
+            vision_tool = genai.Client(api_key=auth_key)
 
         print(MSG_INFO_MODEL_CONFIG.format(model=model_name, provider=provider, out_lang=args.output_lang))
         print(MSG_INFO_ACTION_COPY if args.action == "copy" else MSG_INFO_ACTION_RENAME)
@@ -132,11 +146,8 @@ def main():
             
             while True:
                 try:
-                    # Generate prefix based on provider
-                    if args.use_vertex:
-                        prefix = vision_tool.generate_filename_prefix(target)
-                    else:
-                        prefix = get_ai_studio_prefix(vision_tool, target, args.output_lang)
+                    # Generate prefix based on provider (Unified calling syntax)
+                    prefix = get_gemini_prefix(vision_tool, model_name, target, args.output_lang)
                     
                     # Sanitize prefix
                     prefix = prefix.replace("/", "-").replace("\\", "-").replace(":", "-").strip()

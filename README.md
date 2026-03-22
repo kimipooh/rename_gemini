@@ -6,6 +6,7 @@
 > **Version 1.3 (2026-03-21) 無害化（サニタイズ）: スラッシュ等をハイフンに置換する処理を追加**  
 > **Version 2.0 (2026-03-21) Vertex AIの制限回避のため Google AI Studio をデフォルトに、Vertex AI をサブに変更。**  
 > **Version 2.1 (2026-03-21) --sleep と --retry-sleep オプションを追加し、利用するモデルに応じて調整できるように変更。**
+> **Version 3.0 (2026-03-22) google.generativeaiとgoogle-cloud-aiplatformモジュールを廃止し、google.genaiに統合した。**
 
 > Gemini API (Google AI Studio / Google Cloud Vertex AI) を利用して画像の内容を解析し、その内容にふさわしい接頭辞（プレフィックス）を生成して自動的にファイル名を変更・整理するツールです。
 
@@ -30,9 +31,9 @@
 3. JSON キーを生成し、実行時に `--keyfile` でパスを指定するか、`DEFAULT_CREDENTIALS_PATH` に記述してください。
 
 ### 📦 Python モジュールのインストール
-Version 2.0 では以下のモジュールが必要です。
+Version 3.0 では以下のモジュールが必要です。
 
-`python3 -m pip install google-cloud-aiplatform google-generativeai Pillow`
+`python3 -m pip install google.genai Pillow`
 
 ※ Python 3.10 以降を推奨します。macOS 標準の 3.9.x をお使いの場合は venv 等で最新環境を構築してください。
 
@@ -69,6 +70,26 @@ Version 2.0 では以下のモジュールが必要です。
 | **`gemini-3.1-flash-lite-preview`** | 思考機能対応。ただし思考レベルを指定しない（None）ざと大雑把になりやすい）|
 
 モデルごとの上限は、Google AI Studio のレート制限や、[制限](https://ai.google.dev/gemini-api/docs/rate-limits)を参考にしてください。
+
+### 詳細比較分析（ベンチマーク）
+
+スクリーンショット 1208枚をもとに、そこから100枚を抽出して比較しました。  
+
+| モデル | 精度 (平均文字数) | 分類数 (ユニーク) | コスト (100枚) | Gemini 2.5 Flash (1208枚) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Gemini 2.5 Flash (1208枚)** | **9.48文字 (最高)** | **93種 (最多)** | ¥36.0 | 100% |
+| Gemini 2.5 Flash (100枚) | 5.57文字 | 88種 | ¥36.0 | 3.0% |
+| **Gemini 2.5 Flash Lite (100枚)** | 4.31文字 | 78種 | **¥0.4 (最安)** | 3.0% |
+| Gemini 3 Flash (Preview) | 6.73文字 | 76種 | ¥30.0 | **8.0%** |
+| Gemini 3.1 Flash Lite (High) | 5.80文字 | 77種 | ¥4.0 | 2.0% |
+
+*なおコストはあくまで目安です。容量、画像の中身やその時々の各APIのコストなどによって変動します。
+
+
+#### モデル別分析コメント
+- **Gemini 2.5 Flash (1208枚):** 情報の具体性が最も高く、ファイル名から画面内容が容易に推測可能。
+- **Gemini 2.5 Flash Lite:** 圧倒的低コスト。精度よりも「大量のデータを高速かつ安価に処理する」用途に最適。
+- **Gemini 3.1 Flash Lite (High):** コストと精度のバランスが良く、次世代のスタンダード候補。
 
 ---
 
